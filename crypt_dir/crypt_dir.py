@@ -82,6 +82,7 @@ def clean_encrypted_dir(plain_dir: str, encrypted_dir: str):
         if not os.path.exists(plain_path):
             delete_if_ok(encrypted_path)
 
+
 def copy_dir_structure(dir_in: str, dir_out: str):
     dir_in = os.path.abspath(dir_in)
     dir_out = os.path.abspath(dir_out)
@@ -89,6 +90,7 @@ def copy_dir_structure(dir_in: str, dir_out: str):
         path_out = path_in.replace(dir_in, dir_out)
         if not os.path.exists(path_out):
             os.makedirs(path_out)
+
 
 def write_encrypted_dir(key_file: str, plain_dir: str, encrypted_dir: str, max_workers: int | None = None):
     """
