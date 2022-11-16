@@ -46,8 +46,12 @@ def walk_dir(path: str, skip_mount: bool = True, skip_link: bool = True) -> Iter
         yield path
 
 
-def plain_path_to_encrypted_path(plain_dir: str, encrypted_dir: str, path: str) -> str:
-    return path.replace(plain_dir, encrypted_dir) + f".{ENCRYPTED_EXT}"
+def plain_path_to_encrypted_path(plain_dir: str, encrypted_dir: str, plain_path: str) -> str:
+    return plain_path.replace(plain_dir, encrypted_dir) + f".{ENCRYPTED_EXT}"
+
+
+def plain_dir_to_encrypted_dir(plain_dir: str, encrypted_dir: str, plain_path: str) -> str:
+    return plain_path.replace(plain_dir, encrypted_dir)
 
 
 def encrypted_path_to_plain_path(plain_dir: str, encrypted_dir: str, encrypted_path: str) -> str:
@@ -92,6 +96,11 @@ def write_encrypted_dir(key_file: str, plain_dir: str, encrypted_dir: str, max_w
     encrypted_dir = os.path.abspath(encrypted_dir)
     codec = Codec(key_file)
 
+    for plain_path in walk_dir(plain_dir):
+        encrypted_path = plain_dir_to_encrypted_dir(plain_dir, encrypted_dir, plain_path)
+        if not os.path.exists(encrypted_path):
+            os.mkdir(encrypted_path)
+
     def make_dir_and_encrypt_file_if_needed(plain_path: str):
         encrypted_path = plain_path_to_encrypted_path(plain_dir, encrypted_dir, plain_path)
         try:
@@ -102,7 +111,8 @@ def write_encrypted_dir(key_file: str, plain_dir: str, encrypted_dir: str, max_w
         return encrypted, encrypted_path
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
-        future_list = [executor.submit(make_dir_and_encrypt_file_if_needed, path) for path in walk_file(plain_dir)]
+        future_list = [executor.submit(make_dir_and_encrypt_file_if_needed, plain_path) for plain_path in
+                       walk_file(plain_dir)]
         for future in concurrent.futures.as_completed(future_list):
             encrypted, encrypted_path = future.result()
             if encrypted:
@@ -125,6 +135,11 @@ def read_encrypted_dir(key_file: str, encrypted_dir: str, plain_dir: str, max_wo
     encrypted_dir = os.path.abspath(encrypted_dir)
     plain_dir = os.path.abspath(plain_dir)
     codec = Codec(key_file)
+
+    for encrypted_path in walk_dir(encrypted_dir):
+        plain_path = encrypted_dir_to_plain_dir(plain_dir, encrypted_dir, encrypted_path)
+        if not os.path.exists(plain_path):
+            os.mkdir(plain_path)
 
     def decrypt_file_if_needed(encrypted_path: str):
         plain_path = encrypted_path_to_plain_path(plain_dir, encrypted_dir, encrypted_path)
