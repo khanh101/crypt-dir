@@ -82,6 +82,13 @@ def clean_encrypted_dir(plain_dir: str, encrypted_dir: str):
         if not os.path.exists(plain_path):
             delete_if_ok(encrypted_path)
 
+def copy_dir_structure(dir_in: str, dir_out: str):
+    dir_in = os.path.abspath(dir_in)
+    dir_out = os.path.abspath(dir_out)
+    for path_in in walk_dir(dir_in):
+        path_out = path_in.replace(dir_in, dir_out)
+        if not os.path.exists(path_out):
+            os.makedirs(path_out)
 
 def write_encrypted_dir(key_file: str, plain_dir: str, encrypted_dir: str, max_workers: int | None = None):
     """
@@ -95,11 +102,7 @@ def write_encrypted_dir(key_file: str, plain_dir: str, encrypted_dir: str, max_w
     plain_dir = os.path.abspath(plain_dir)
     encrypted_dir = os.path.abspath(encrypted_dir)
     codec = Codec(key_file)
-
-    for plain_path in walk_dir(plain_dir):
-        encrypted_path = plain_dir_to_encrypted_dir(plain_dir, encrypted_dir, plain_path)
-        if not os.path.exists(encrypted_path):
-            os.mkdir(encrypted_path)
+    copy_dir_structure(plain_dir, encrypted_dir)
 
     def make_dir_and_encrypt_file_if_needed(plain_path: str):
         encrypted_path = plain_path_to_encrypted_path(plain_dir, encrypted_dir, plain_path)
@@ -135,11 +138,7 @@ def read_encrypted_dir(key_file: str, encrypted_dir: str, plain_dir: str, max_wo
     encrypted_dir = os.path.abspath(encrypted_dir)
     plain_dir = os.path.abspath(plain_dir)
     codec = Codec(key_file)
-
-    for encrypted_path in walk_dir(encrypted_dir):
-        plain_path = encrypted_dir_to_plain_dir(plain_dir, encrypted_dir, encrypted_path)
-        if not os.path.exists(plain_path):
-            os.mkdir(plain_path)
+    copy_dir_structure(encrypted_dir, plain_dir)
 
     def decrypt_file_if_needed(encrypted_path: str):
         plain_path = encrypted_path_to_plain_path(plain_dir, encrypted_dir, encrypted_path)
