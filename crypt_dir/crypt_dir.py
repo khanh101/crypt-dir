@@ -132,9 +132,13 @@ def read_encrypted_dir(key_file: str, encrypted_dir: str, plain_dir: str, max_wo
         return decrypted, plain_path
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
-        future_list = [executor.submit(decrypt_file_if_needed, encrypted_path) for encrypted_path in walk_file(encrypted_dir)]
+        future_list = [executor.submit(decrypt_file_if_needed, encrypted_path) for encrypted_path in
+                       walk_file(encrypted_dir)]
         for future in concurrent.futures.as_completed(future_list):
             decrypted, path = future.result()
             if decrypted:
                 sys.stdout.write(f"decrypted: {path}\n")
 
+
+def is_encrypted_file(path: str) -> bool:
+    return path.endswith(".encrypted")
