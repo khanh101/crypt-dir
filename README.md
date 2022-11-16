@@ -1,7 +1,8 @@
 # CRYPT_DIR
 
-- Encrypt all your files in a directory and write into another directory
+- Encrypt all your files in a directory and write into another directory if needed
 - Clean the encrypted directory if files or directories have been deleted
+- Decrypt all your files in a directory and write into another directory if needed
 
 # INSTALLATION
 
