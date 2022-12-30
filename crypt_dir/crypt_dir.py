@@ -7,7 +7,7 @@ import os
 import shutil
 from .crypt_file import Codec
 
-ENCRYPTED_EXT = "encrypted"
+ENCRYPTED_EXT = "enc"
 
 
 def delete_if_ok(encrypted_path: str):

@@ -6,7 +6,7 @@ if __name__ == "__main__":
 
     setuptools.setup(
         name="crypt-dir",
-        version="0.1.1",
+        version="0.1.2",
         author="Nguyen Ngoc Khanh",
         author_email="khanh.nguyen.contact@gmail.com",
         long_description=long_description,
