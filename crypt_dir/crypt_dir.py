@@ -125,7 +125,7 @@ def write_encrypted_dir(key_file: str, plain_dir: str, encrypted_dir: str, max_w
 
 
 def is_encrypted_file(path: str) -> bool:
-    return path.endswith(".encrypted")
+    return path.endswith(f".{ENCRYPTED_EXT}")
 
 
 def read_encrypted_dir(key_file: str, encrypted_dir: str, plain_dir: str, max_workers: int | None = None):
