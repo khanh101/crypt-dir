@@ -70,7 +70,7 @@ def aes256_encrypt(key: bytes, iv: bytes, plain_read_io: BinaryIO, cipher_write_
         if len(chunk) == 0:
             return
         if len(chunk) % BLOCK_SIZE != 0:
-            chunk += b"\0" * (BLOCK_SIZE - len(chunk) % BLOCK_SIZE)  # padded with 0 to equal BLOCK_SIZE
+            chunk += b"\0" * (BLOCK_SIZE - len(chunk) % BLOCK_SIZE)  # padded with 0s until BLOCK_SIZE
         b = aes.encrypt(chunk)
         cipher_write_io.write(b)
 
