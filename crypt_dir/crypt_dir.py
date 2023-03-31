@@ -93,7 +93,7 @@ def copy_dir_structure(dir_in: str, dir_out: str):
             os.makedirs(path_out)
 
 
-def write_encrypted_dir_if_needed(key_file: str, plain_dir: str, encrypted_dir: str, max_workers: int | None = None):
+def update_encrypted_dir(key_file: str, plain_dir: str, encrypted_dir: str, max_workers: int | None = None):
     """
     read files in plain_dir, encrypt and write files into encrypted_dir if needed
     :param plain_dir:

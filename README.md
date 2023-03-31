@@ -20,16 +20,16 @@ restored_dir = "restored"
 
 # Delete all files, directories in encrypted_dir that don't exist in the plain_dir
 crypt_dir.clean_encrypted_dir(
-    plain_dir=plain_dir,
-    encrypted_dir=encrypted_dir,
+  plain_dir=plain_dir,
+  encrypted_dir=encrypted_dir,
 )
 
 # read files in plain_dir, encrypt and write files into encrypted_dir if needed using 12 workers
-crypt_dir.write_encrypted_dir_if_needed(
-    key_file=key_file,
-    plain_dir=plain_dir,
-    encrypted_dir=encrypted_dir,
-    max_workers=12,
+crypt_dir.update_encrypted_dir(
+  key_file=key_file,
+  plain_dir=plain_dir,
+  encrypted_dir=encrypted_dir,
+  max_workers=12,
 )
 ```
 
