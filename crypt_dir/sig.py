@@ -22,3 +22,14 @@ def set_file_signature(path: str, sig: bytes):
     mtime = bytes_to_uint64(sig)
     atime = mtime
     os.utime(path=path, ns=(atime, mtime))
+
+
+"""
+Alternative implementation of file signature using hash
+
+FILE_SIGNATURE_SIZE = HASH_SIZE
+def get_file_signature(path: str) -> bytes:
+    return sha1_hash(open(path, "rb"))
+def set_file_signature(path: str, sig: bytes):
+    assert sig == get_file_signature(path)
+"""
