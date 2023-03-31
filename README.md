@@ -75,14 +75,15 @@ You don't need to know the specification. For some folks who want to know exactl
 
 - `.enc1` file
 
-  - `signature`: `SHA1` bytes of key
+  - `file_signature`: little-endian encoded mtime of file in uint64
+  - `key_signature`: `SHA1` bytes of key
   - `file_size`: little-endian encoded file size in uint64
   - `iv`: `AES256` initialization vector
   - `file encrypted`: `AES256` file encrypted bytes with chunk size of `2^30`
 
 ```
-|   signature   |   file_size   |   iv          |   encrypted_data  |
-|   20 bytes    |   8 bytes     |   16 bytes    |   n bytes         |
+|   file_signature   |   key_signature   |   file_size   |   iv          |   encrypted_data  |
+|   8 bytes          |   20 bytes        |   8 bytes     |   16 bytes    |   n bytes         |
 ```
 
 ## SPECIFICATION 0.*
