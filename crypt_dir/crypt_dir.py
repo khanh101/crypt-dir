@@ -2,10 +2,11 @@
 from __future__ import annotations
 
 import concurrent.futures
-import sys
-from typing import *
 import os
 import shutil
+import sys
+from typing import *
+
 from .crypt_file import Codec
 
 ENCRYPTED_EXT = "enc1"
