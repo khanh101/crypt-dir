@@ -5,7 +5,7 @@ if __name__ == "__main__":
         long_description = f.read()
     setuptools.setup(
         name="crypt-dir",
-        version="1.0.7",
+        version="1.0.8",
         author="Nguyen Ngoc Khanh",
         author_email="khanh.nguyen.contact@gmail.com",
         long_description=long_description,
@@ -13,6 +13,6 @@ if __name__ == "__main__":
         url="https://github.com/khanh-nguyen-code/crypt-dir",
         packages=setuptools.find_packages(),
         install_requires=[
-            "pycryptodomex==3.15.0",
+            "pycryptodomex==3.17",
         ],
     )
