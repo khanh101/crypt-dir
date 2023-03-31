@@ -1,8 +1,8 @@
 # CRYPT_DIR
 
-- Encrypt all your files in a directory and write into another directory if needed
+- Encrypt all your files and write into another directory if there is update
 - Clean the encrypted directory if files or directories have been deleted
-- Decrypt all your files in a directory and write into another directory if needed
+- Restore
 - Minimize writing to SSDs
 
 # USAGE
