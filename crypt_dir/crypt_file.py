@@ -59,7 +59,7 @@ def sha1_hash(f_in: BinaryIO) -> bytes:
         h.update(chunk)
 
 
-def aes256_encrypt(key: bytes, iv: bytes, plain_read_io: BinaryIO, cipher_write_io: BinaryIO):
+def aes256_encrypt(key: bytes, iv: bytes, plain_read_io: BinaryIO, encrypted_write_io: BinaryIO):
     assert BLOCK_SIZE == 16
     assert CHUNK_SIZE % BLOCK_SIZE == 0
     assert len(iv) == BLOCK_SIZE
@@ -72,10 +72,10 @@ def aes256_encrypt(key: bytes, iv: bytes, plain_read_io: BinaryIO, cipher_write_
         if len(chunk) % BLOCK_SIZE != 0:
             chunk += b"\0" * (BLOCK_SIZE - len(chunk) % BLOCK_SIZE)  # padded with 0s until BLOCK_SIZE
         b = aes.encrypt(chunk)
-        cipher_write_io.write(b)
+        encrypted_write_io.write(b)
 
 
-def aes256_decrypt(key: bytes, iv: bytes, size: int, cipher_read_io: BinaryIO, plain_write_io: BinaryIO):
+def aes256_decrypt(key: bytes, iv: bytes, size: int, encrypted_read_io: BinaryIO, decrypted_write_io: BinaryIO):
     assert BLOCK_SIZE == 16
     assert CHUNK_SIZE % BLOCK_SIZE == 0
     assert len(iv) == BLOCK_SIZE
@@ -83,48 +83,48 @@ def aes256_decrypt(key: bytes, iv: bytes, size: int, cipher_read_io: BinaryIO, p
     aes = AES.new(key, AES_MODE, iv)
     remaining_size = size
     while True:
-        chunk = cipher_read_io.read(CHUNK_SIZE)
+        chunk = encrypted_read_io.read(CHUNK_SIZE)
         if len(chunk) == 0:
             return
         b = aes.decrypt(chunk)
         if remaining_size < len(b):
             b = b[:remaining_size]
-        plain_write_io.write(b)
+        decrypted_write_io.write(b)
         remaining_size -= len(b)
 
 
-def aes256_encrypt_file_if_needed(key: bytes, sig: bytes, plain_path: str, cipher_path: str) -> bool:
+def aes256_encrypt_file_if_needed(key: bytes, sig: bytes, plain_path: str, encrypted_path: str) -> bool:
     plain_mtime = get_mtime(plain_path)
     # check file updated
-    if os.path.exists(cipher_path):
-        cipher_mtime = get_mtime(cipher_path)
-        if plain_mtime == cipher_mtime:
+    if os.path.exists(encrypted_path):
+        encrypted_mtime = get_mtime(encrypted_path)
+        if plain_mtime == encrypted_mtime:
             return False
 
-    # cipher file will be updated regardless its mtime is sooner or later
+    # encrypted file will be updated regardless its mtime is sooner or later
     # encrypt
     iv = random_bytes(IV_SIZE)
     size = os.path.getsize(plain_path)
-    with open(plain_path, "rb") as plain_f, open(cipher_path, "wb") as cipher_f:
-        cipher_f.write(sig)  # 20 bytes - signature
-        cipher_f.write(uint64_to_bytes(size))  # 8 bytes - little endian of file size in uint64
-        cipher_f.write(iv)  # 16 bytes - initialization vector
-        aes256_encrypt(key=key, iv=iv, plain_read_io=plain_f, cipher_write_io=cipher_f)
+    with open(plain_path, "rb") as plain_f, open(encrypted_path, "wb") as encrypted_f:
+        encrypted_f.write(sig)  # 20 bytes - signature
+        encrypted_f.write(uint64_to_bytes(size))  # 8 bytes - little endian of file size in uint64
+        encrypted_f.write(iv)  # 16 bytes - initialization vector
+        aes256_encrypt(key=key, iv=iv, plain_read_io=plain_f, encrypted_write_io=encrypted_f)
     # set mtime after file is closed
-    set_mtime(path=cipher_path, mtime=plain_mtime)
+    set_mtime(path=encrypted_path, mtime=plain_mtime)
     return True
 
 
-def aes256_decrypt_file(key: bytes, sig: bytes, plain_path: str, cipher_path: str):
-    with open(cipher_path, "rb") as cipher_f, open(plain_path, "wb") as plain_f:
-        cipher_sig = cipher_f.read(HASH_SIZE)
-        if cipher_sig != sig:
-            raise RuntimeError(f"signature does not match for {cipher_path}")
-        size = bytes_to_uint64(cipher_f.read(UINT64_SIZE))
-        iv = cipher_f.read(BLOCK_SIZE)
-        aes256_decrypt(key=key, iv=iv, size=size, cipher_read_io=cipher_f, plain_write_io=plain_f)
+def aes256_decrypt_file(key: bytes, sig: bytes, encrypted_path: str, decrypted_path: str):
+    with open(encrypted_path, "rb") as encrypted_f, open(decrypted_path, "wb") as plain_f:
+        encrypted_sig = encrypted_f.read(HASH_SIZE)
+        if encrypted_sig != sig:
+            raise RuntimeError(f"signature does not match for {encrypted_path}")
+        size = bytes_to_uint64(encrypted_f.read(UINT64_SIZE))
+        iv = encrypted_f.read(BLOCK_SIZE)
+        aes256_decrypt(key=key, iv=iv, size=size, encrypted_read_io=encrypted_f, decrypted_write_io=plain_f)
     # set mtime after file is closed
-    set_mtime(path=plain_path, mtime=get_mtime(cipher_path))
+    set_mtime(path=decrypted_path, mtime=get_mtime(encrypted_path))
 
 
 class Codec:
@@ -141,20 +141,20 @@ class Codec:
         self.key = read_hex_file(key_path)
         self.sig = sha1_hash(io.BytesIO(self.key))
 
-    def encrypt_file_if_needed(self, plain_path: str, cipher_path: str) -> bool:
+    def encrypt_file_if_needed(self, plain_path: str, encrypted_path: str) -> bool:
         return aes256_encrypt_file_if_needed(
             key=self.key,
             sig=self.sig,
             plain_path=plain_path,
-            cipher_path=cipher_path,
+            encrypted_path=encrypted_path,
         )
 
-    def decrypt_file(self, plain_path: str, cipher_path: str):
+    def decrypt_file(self, encrypted_path: str, decrypted_path: str):
         aes256_decrypt_file(
             key=self.key,
             sig=self.sig,
-            plain_path=plain_path,
-            cipher_path=cipher_path,
+            encrypted_path=encrypted_path,
+            decrypted_path=decrypted_path,
         )
 
 
@@ -165,16 +165,16 @@ if __name__ == "__main__":
     plain = b"hello world, this is an example message"
     print("plain", plain)
 
-    cipher_io = io.BytesIO()
-    aes256_encrypt(key, iv, io.BytesIO(plain), cipher_io)
-    cipher_io.seek(0)
-    cipher = cipher_io.read()
-    print("cipher", cipher)
+    encrypted_io = io.BytesIO()
+    aes256_encrypt(key, iv, io.BytesIO(plain), encrypted_io)
+    encrypted_io.seek(0)
+    encrypted = encrypted_io.read()
+    print("encrypted", encrypted)
 
-    cipher_io.seek(0)
-    decrypt_io = io.BytesIO()
-    aes256_decrypt(key, iv, len(plain), cipher_io, decrypt_io)
-    decrypt_io.seek(0)
-    decrypt = decrypt_io.read()
-    print("decrypt", decrypt)
-    assert plain == decrypt
+    encrypted_io.seek(0)
+    decrypted_io = io.BytesIO()
+    aes256_decrypt(key, iv, len(plain), encrypted_io, decrypted_io)
+    decrypted_io.seek(0)
+    decrypted = decrypted_io.read()
+    print("decrypt", decrypted)
+    assert plain == decrypted

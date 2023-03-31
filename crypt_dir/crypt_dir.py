@@ -113,7 +113,7 @@ def write_encrypted_dir(key_file: str, plain_dir: str, encrypted_dir: str, max_w
             os.makedirs(os.path.dirname(encrypted_path))
         except FileExistsError:
             pass
-        encrypted = codec.encrypt_file_if_needed(plain_path, encrypted_path)
+        encrypted = codec.encrypt_file_if_needed(plain_path=plain_path, encrypted_path=encrypted_path)
         return encrypted, encrypted_path
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
@@ -129,28 +129,28 @@ def is_encrypted_file(path: str) -> bool:
     return path.endswith(f".{ENCRYPTED_EXT}")
 
 
-def read_encrypted_dir(key_file: str, encrypted_dir: str, plain_dir: str, max_workers: int | None = None):
+def read_encrypted_dir(key_file: str, encrypted_dir: str, decrypted_dir: str, max_workers: int | None = None):
     """
     decrypt all files in encrypted_dir
-    :param plain_dir:
+    :param decrypted_dir:
     :param encrypted_dir:
     :param key_file:
     :param max_workers:
     :return:
     """
     encrypted_dir = os.path.abspath(encrypted_dir)
-    plain_dir = os.path.abspath(plain_dir)
+    decrypted_dir = os.path.abspath(decrypted_dir)
     codec = Codec(key_file)
-    copy_dir_structure(encrypted_dir, plain_dir)
+    copy_dir_structure(encrypted_dir, decrypted_dir)
 
     def decrypt_file(encrypted_path: str):
-        plain_path = encrypted_path_to_plain_path(plain_dir, encrypted_dir, encrypted_path)
+        decrypted_path = encrypted_path_to_plain_path(decrypted_dir, encrypted_dir, encrypted_path)
         try:
-            os.makedirs(os.path.dirname(plain_path))
+            os.makedirs(os.path.dirname(decrypted_path))
         except FileExistsError:
             pass
-        decrypted = codec.decrypt_file(encrypted_path, plain_path)
-        return decrypted, plain_path
+        decrypted = codec.decrypt_file(encrypted_path=encrypted_path, decrypted_path=decrypted_path)
+        return decrypted, decrypted_path
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
         future_list = [executor.submit(decrypt_file, encrypted_path) for encrypted_path in
