@@ -65,7 +65,7 @@ def encrypted_dir_to_plain_dir(plain_dir: str, encrypted_dir: str, encrypted_pat
 
 def clean_encrypted_dir(plain_dir: str, encrypted_dir: str):
     """
-    delete files, directories in encrypted_dir if they do not appear in the plain_dir
+    Delete all files, directories in encrypted_dir that don't exist in the plain_dir
     :param plain_dir:
     :param encrypted_dir:
     :return:
