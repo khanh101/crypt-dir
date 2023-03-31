@@ -4,8 +4,8 @@ from __future__ import annotations
 import io
 import os
 
-from .crypt import aes256_encrypt, aes256_decrypt, sha1_hash, random_bytes, IV_SIZE, HASH_SIZE, BLOCK_SIZE, KEY_SIZE
-from .sig import get_file_signature, FILE_SIGNATURE_SIZE, get_key_signature, KEY_SIGNATURE_SIZE
+from .crypt import aes256_encrypt, aes256_decrypt, sha1_hash, random_bytes, IV_SIZE, BLOCK_SIZE, KEY_SIZE
+from .sig import get_file_signature, FILE_SIGNATURE_SIZE, get_key_signature, KEY_SIGNATURE_SIZE, set_file_signature
 from .util import uint64_to_bytes, bytes_to_uint64, write_hex_file, read_hex_file, UINT64_SIZE
 
 
@@ -15,12 +15,12 @@ def aes256_encrypt_file_if_needed(
 ) -> bool:
     if key_sig is None:
         key_sig = get_key_signature(key)
-    plain_sig = get_file_signature(plain_path)
+    plain_file_sig = get_file_signature(plain_path)
     # check file updated
     if os.path.exists(encrypted_path):
         with open(encrypted_path, "rb") as f:
-            encrypted_sig = f.read(FILE_SIGNATURE_SIZE)
-        if plain_sig == encrypted_sig:
+            encrypted_file_sig = f.read(FILE_SIGNATURE_SIZE)
+        if plain_file_sig == encrypted_file_sig:
             return False
 
     # encrypted file will be updated regardless its mtime is sooner or later
@@ -28,7 +28,7 @@ def aes256_encrypt_file_if_needed(
     iv = random_bytes(IV_SIZE)
     size = os.path.getsize(plain_path)
     with open(plain_path, "rb") as plain_f, open(encrypted_path, "wb") as encrypted_f:
-        encrypted_f.write(plain_sig)  # 8 bytes - file signature - little endian of mtime in uint64
+        encrypted_f.write(plain_file_sig)  # 8 bytes - file signature - little endian of mtime in uint64
         encrypted_f.write(key_sig)  # 20 bytes - key signature
         encrypted_f.write(uint64_to_bytes(size))  # 8 bytes - little endian of file size in uint64
         encrypted_f.write(iv)  # 16 bytes - initialization vector
@@ -42,14 +42,16 @@ def aes256_decrypt_file(
 ):
     if key_sig is None:
         key_sig = get_key_signature(key)
-    with open(encrypted_path, "rb") as encrypted_f, open(decrypted_path, "wb") as plain_f:
-        encrypted_f.seek(FILE_SIGNATURE_SIZE)  # 8 bytes - file signature - little endian of mtime in uint64
+    with open(encrypted_path, "rb") as encrypted_f, open(decrypted_path, "wb") as decrypted_f:
+        encrypted_file_sig = encrypted_f.read(FILE_SIGNATURE_SIZE)  # 8 bytes - file signature - little endian of mtime in uint64
         encrypted_key_sig = encrypted_f.read(KEY_SIGNATURE_SIZE)  # 20 bytes - key signature
         if encrypted_key_sig != key_sig:
             raise RuntimeError(f"signature does not match for {encrypted_path}")
-        size = bytes_to_uint64(encrypted_f.read(UINT64_SIZE)) # 8 bytes - little endian of file size in uint64
-        iv = encrypted_f.read(BLOCK_SIZE) # 16 bytes - initialization vector
-        aes256_decrypt(key=key, iv=iv, size=size, encrypted_read_io=encrypted_f, decrypted_write_io=plain_f)
+        size = bytes_to_uint64(encrypted_f.read(UINT64_SIZE))  # 8 bytes - little endian of file size in uint64
+        iv = encrypted_f.read(BLOCK_SIZE)  # 16 bytes - initialization vector
+        aes256_decrypt(key=key, iv=iv, size=size, encrypted_read_io=encrypted_f, decrypted_write_io=decrypted_f)
+    # set file signature
+    set_file_signature(path=decrypted_path, sig=encrypted_file_sig)
 
 
 class Codec:
