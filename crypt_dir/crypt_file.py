@@ -1,9 +1,9 @@
+#!/usr/bin/env python
 import io
 import os
 import struct
-from typing import BinaryIO
+from typing import BinaryIO, Optional
 
-# pip install pycryptodomex
 from Cryptodome.Cipher import AES
 from Cryptodome.Hash import SHA1
 
@@ -13,10 +13,17 @@ KEY_SIZE = 32  # size of AES key in bytes
 UINT64_SIZE = 8  # size of uint64 in bytes
 AES_MODE = AES.MODE_CBC  # cipher block chaining
 CHUNK_SIZE = 2 ** 30  # 1 GB # chunk size to read from io in bytes
+IV_SIZE = 16  # size of iv in bytes
 
 
-def verify(plain: bytes, encrypted: bytes) -> bool:
-    return sha1_hash(io.BytesIO(plain)) == io.BytesIO(encrypted).read(2 * HASH_SIZE)[HASH_SIZE:]
+def get_mtime(path: str) -> int:
+    return os.stat(path=path).st_mtime_ns
+
+
+def set_mtime(path: str, mtime: int, atime: Optional[int] = None):
+    if atime is None:
+        atime = mtime
+    os.utime(path=path, ns=(atime, mtime))
 
 
 def random_bytes(count: int = 1) -> bytes:
@@ -44,40 +51,31 @@ def bytes_to_uint64(b: bytes) -> int:
 def sha1_hash(f_in: BinaryIO) -> bytes:
     h = SHA1.new()
     while True:
-        b = f_in.read(CHUNK_SIZE)
-        if len(b) == 0:
+        chunk = f_in.read(CHUNK_SIZE)
+        if len(chunk) == 0:
             b = h.digest()
             assert len(b) == HASH_SIZE
             return b
-        h.update(b)
+        h.update(chunk)
 
 
-def sha1_hash_file(path_in: str) -> bytes:
-    """
-    no need to cache here
-    a file is hashed at most once in Codec.encrypt_file_if_needed
-    """
-    with open(path_in, "rb") as f_in:
-        return sha1_hash(f_in)
-
-
-def aes256_encrypt(key: bytes, iv: bytes, f_in: BinaryIO, f_out: BinaryIO):
+def aes256_encrypt(key: bytes, iv: bytes, plain_read_io: BinaryIO, cipher_write_io: BinaryIO):
     assert BLOCK_SIZE == 16
     assert CHUNK_SIZE % BLOCK_SIZE == 0
     assert len(iv) == BLOCK_SIZE
     assert len(key) == KEY_SIZE
     aes = AES.new(key, AES_MODE, iv)
     while True:
-        chunk = f_in.read(CHUNK_SIZE)
+        chunk = plain_read_io.read(CHUNK_SIZE)
         if len(chunk) == 0:
             return
         if len(chunk) % BLOCK_SIZE != 0:
             chunk += b"\0" * (BLOCK_SIZE - len(chunk) % BLOCK_SIZE)  # padded with 0 to equal BLOCK_SIZE
         b = aes.encrypt(chunk)
-        f_out.write(b)
+        cipher_write_io.write(b)
 
 
-def aes256_decrypt(key: bytes, iv: bytes, size: int, f_in: BinaryIO, f_out: BinaryIO):
+def aes256_decrypt(key: bytes, iv: bytes, size: int, cipher_read_io: BinaryIO, plain_write_io: BinaryIO):
     assert BLOCK_SIZE == 16
     assert CHUNK_SIZE % BLOCK_SIZE == 0
     assert len(iv) == BLOCK_SIZE
@@ -85,120 +83,96 @@ def aes256_decrypt(key: bytes, iv: bytes, size: int, f_in: BinaryIO, f_out: Bina
     aes = AES.new(key, AES_MODE, iv)
     remaining_size = size
     while True:
-        chunk = f_in.read(CHUNK_SIZE)
+        chunk = cipher_read_io.read(CHUNK_SIZE)
         if len(chunk) == 0:
             return
         b = aes.decrypt(chunk)
         if remaining_size < len(b):
             b = b[:remaining_size]
-        f_out.write(b)
+        plain_write_io.write(b)
         remaining_size -= len(b)
 
 
+def aes256_encrypt_file_if_needed(key: bytes, sig: bytes, plain_path: str, cipher_path: str) -> bool:
+    plain_mtime = get_mtime(plain_path)
+    # check file updated
+    if os.path.exists(cipher_path):
+        cipher_mtime = get_mtime(cipher_path)
+        if plain_mtime == cipher_mtime:
+            return False
+    # encrypt
+    iv = random_bytes(IV_SIZE)
+    size = os.path.getsize(plain_path)
+    with open(plain_path, "rb") as plain_f, open(cipher_path, "wb") as cipher_f:
+        cipher_f.write(sig)  # 20 bytes - signature
+        cipher_f.write(uint64_to_bytes(size))  # 8 bytes - little endian of file size in uint64
+        cipher_f.write(iv)  # 16 bytes - initialization vector
+        aes256_encrypt(key=key, iv=iv, plain_read_io=plain_f, cipher_write_io=cipher_f)
+    # set mtime after file is closed
+    set_mtime(path=cipher_path, mtime=plain_mtime)
+    return True
+
+
+def aes256_decrypt_file(key: bytes, sig: bytes, plain_path: str, cipher_path: str):
+    with open(cipher_path, "rb") as cipher_f, open(plain_path, "wb") as plain_f:
+        cipher_sig = cipher_f.read(HASH_SIZE)
+        if cipher_sig != sig:
+            raise RuntimeError(f"signature does not match for {cipher_path}")
+        size = bytes_to_uint64(cipher_f.read(UINT64_SIZE))
+        iv = cipher_f.read(BLOCK_SIZE)
+        aes256_decrypt(key=key, iv=iv, size=size, cipher_read_io=cipher_f, plain_write_io=plain_f)
+    # set mtime after file is closed
+    set_mtime(path=plain_path, mtime=get_mtime(cipher_path))
+
+
 class Codec:
-    def __init__(self, key_file: str):
+    def __init__(self, key_path: str):
         """
         Codec: encrypt and decrypt a file
         encrypted file structure
-            |key_hash| |file_hash| |file_size| |iv| |encrypted_data|
+        |signature|file_size|iv|encrypted_data|
 
-
-        :param key_file: path to key file in hex
+        :param key_path: path to key file in hex
         """
-        if not os.path.exists(key_file):
-            write_hex_file(key_file, random_bytes(KEY_SIZE))
-        self.key = read_hex_file(key_file)
-        self.hash = sha1_hash(io.BytesIO(self.key))
+        if not os.path.exists(key_path):
+            write_hex_file(key_path, random_bytes(KEY_SIZE))
+        self.key = read_hex_file(key_path)
+        self.sig = sha1_hash(io.BytesIO(self.key))
 
-    def encrypt_file_if_needed(self, plain_path: str, encrypt_path: str) -> bool:
-        iv = random_bytes(16)
-        size = os.path.getsize(plain_path)
-        file_hash_plain = sha1_hash_file(plain_path)
-        # skip if file is encrypted and not changed
-        if os.path.exists(encrypt_path):
-            with open(encrypt_path, "rb") as f_encrypt:
-                key_hash_encrypt = f_encrypt.read(HASH_SIZE)
-                file_hash_encrypt = f_encrypt.read(HASH_SIZE)
-                if key_hash_encrypt == self.hash and file_hash_encrypt == file_hash_plain:
-                    return False  # skipped
+    def encrypt_file_if_needed(self, plain_path: str, cipher_path: str) -> bool:
+        return aes256_encrypt_file_if_needed(
+            key=self.key,
+            sig=self.sig,
+            plain_path=plain_path,
+            cipher_path=cipher_path,
+        )
 
-        with open(plain_path, "rb") as f_plain, open(encrypt_path, "wb") as f_encrypt:
-            f_encrypt.write(self.hash)
-            f_encrypt.write(file_hash_plain)
-            f_encrypt.write(uint64_to_bytes(size))
-            f_encrypt.write(iv)
-            aes256_encrypt(self.key, iv, f_plain, f_encrypt)
-        return True
-
-    def decrypt_file_if_needed(self, encrypt_path: str, plain_path: str) -> bool:
-        with open(encrypt_path, "rb") as f_encrypt:
-            key_hash_encrypt = f_encrypt.read(HASH_SIZE)
-            file_hash_encrypt = f_encrypt.read(HASH_SIZE)
-        if key_hash_encrypt != self.hash:
-            raise RuntimeError("decrypt_file: key not compatible")
-
-        if os.path.exists(plain_path):
-            file_hash_plain = sha1_hash_file(plain_path)
-            if file_hash_plain == file_hash_encrypt:
-                return False  # skipped
-
-        with open(encrypt_path, "rb") as f_encrypt, open(plain_path, "wb") as f_plain:
-            file_hash_encrypt = f_encrypt.read(HASH_SIZE)
-            key_hash_encrypt = f_encrypt.read(HASH_SIZE)
-            size = bytes_to_uint64(f_encrypt.read(UINT64_SIZE))
-            iv = f_encrypt.read(BLOCK_SIZE)
-            aes256_decrypt(self.key, iv, size, f_encrypt, f_plain)
-        return True
-
-    def encrypt(self, plain: bytes) -> bytes:
-        iv = random_bytes(16)
-        size = len(plain)
-
-        file_hash = sha1_hash(io.BytesIO(plain))
-        encrypted_io = io.BytesIO()
-        encrypted_io.write(self.hash)
-        encrypted_io.write(file_hash)
-        encrypted_io.write(uint64_to_bytes(size))
-        encrypted_io.write(iv)
-        aes256_encrypt(self.key, iv, io.BytesIO(plain), encrypted_io)
-        encrypted_io.seek(0)
-        encrypted = encrypted_io.read()
-        return encrypted
-
-    def decrypt(self, encrypted: bytes) -> bytes:
-        encrypted_io = io.BytesIO(encrypted)
-        key_hash = encrypted_io.read(HASH_SIZE)
-        if key_hash != self.hash:
-            return b""
-        file_hash = encrypted_io.read(HASH_SIZE)
-        size = bytes_to_uint64(encrypted_io.read(UINT64_SIZE))
-        iv = encrypted_io.read(BLOCK_SIZE)
-        decrypted_io = io.BytesIO()
-        aes256_decrypt(self.key, iv, size, encrypted_io, decrypted_io)
-        decrypted_io.seek(0)
-        decrypted = decrypted_io.read()
-        return decrypted
+    def decrypt_file(self, plain_path: str, cipher_path: str):
+        aes256_decrypt_file(
+            key=self.key,
+            sig=self.sig,
+            plain_path=plain_path,
+            cipher_path=cipher_path,
+        )
 
 
 if __name__ == "__main__":
-    codec = Codec("key.txt")
+    key = random_bytes(KEY_SIZE)
+    sig = sha1_hash(io.BytesIO(key))
+    iv = random_bytes(IV_SIZE)
     plain = b"hello world, this is an example message"
-    # encrypt
-    encrypted = codec.encrypt(plain)
-    # hash
-    assert verify(plain, encrypted)
-    assert not verify(plain + b"\1", encrypted)
-    assert len(Codec("anotherkey.txt").decrypt(encrypted)) == 0
-    # decrypt
-    decrypted = codec.decrypt(encrypted)
-    assert decrypted == plain
+    print("plain", plain)
 
-    if not os.path.exists("plain.txt"):
-        with open("plain.txt", "wb") as f:
-            f.write(plain)
+    cipher_io = io.BytesIO()
+    aes256_encrypt(key, iv, io.BytesIO(plain), cipher_io)
+    cipher_io.seek(0)
+    cipher = cipher_io.read()
+    print("cipher", cipher)
 
-    encrypted = codec.encrypt_file_if_needed("plain.txt", "encrypted.txt")
-    if not encrypted:
-        print("skipped due to encrypted file exists and plain file unchanged")
-
-    codec.decrypt_file_if_needed("encrypted.txt", "decrypted.txt")
+    cipher_io.seek(0)
+    decrypt_io = io.BytesIO()
+    aes256_decrypt(key, iv, len(plain), cipher_io, decrypt_io)
+    decrypt_io.seek(0)
+    decrypt = decrypt_io.read()
+    print("decrypt", decrypt)
+    assert plain == decrypt

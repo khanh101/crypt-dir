@@ -1,3 +1,4 @@
+#!/usr/bin/env python
 from __future__ import annotations
 
 import concurrent.futures
@@ -7,7 +8,7 @@ import os
 import shutil
 from .crypt_file import Codec
 
-ENCRYPTED_EXT = "enc"
+ENCRYPTED_EXT = "enc1"
 
 
 def delete_if_ok(encrypted_path: str):
@@ -142,17 +143,17 @@ def read_encrypted_dir(key_file: str, encrypted_dir: str, plain_dir: str, max_wo
     codec = Codec(key_file)
     copy_dir_structure(encrypted_dir, plain_dir)
 
-    def decrypt_file_if_needed(encrypted_path: str):
+    def decrypt_file(encrypted_path: str):
         plain_path = encrypted_path_to_plain_path(plain_dir, encrypted_dir, encrypted_path)
         try:
             os.makedirs(os.path.dirname(plain_path))
         except FileExistsError:
             pass
-        decrypted = codec.decrypt_file_if_needed(encrypted_path, plain_path)
+        decrypted = codec.decrypt_file(encrypted_path, plain_path)
         return decrypted, plain_path
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
-        future_list = [executor.submit(decrypt_file_if_needed, encrypted_path) for encrypted_path in
+        future_list = [executor.submit(decrypt_file, encrypted_path) for encrypted_path in
                        walk_file(encrypted_dir) if is_encrypted_file(encrypted_path)]
         for future in concurrent.futures.as_completed(future_list):
             decrypted, path = future.result()
