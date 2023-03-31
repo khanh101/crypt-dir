@@ -100,6 +100,8 @@ def aes256_encrypt_file_if_needed(key: bytes, sig: bytes, plain_path: str, ciphe
         cipher_mtime = get_mtime(cipher_path)
         if plain_mtime == cipher_mtime:
             return False
+
+    # cipher file will be updated regardless its mtime is sooner or later
     # encrypt
     iv = random_bytes(IV_SIZE)
     size = os.path.getsize(plain_path)
