@@ -13,17 +13,24 @@
 # User maintains two directories plain_dir and encrypted_dir
 import crypt_dir
 
-key_file="/Users/khanh/Documents/drive/key.txt"
-plain_dir = "/Users/khanh/Documents/private"
-encrypted_dir = "/Users/khanh/Documents/drive/private"
-decrypted_dir = "/Users/khanh/Documents/private_restored"
+key_file = "key.txt"
+plain_dir = "plain"
+encrypted_dir = "encrypted"
+restored_dir = "restored"
 
 # Delete all files, directories in encrypted_dir that don't exist in the plain_dir
-crypt_dir.clean_encrypted_dir(plain_dir=plain_dir, encrypted_dir=encrypted_dir)
+crypt_dir.clean_encrypted_dir(
+    plain_dir=plain_dir,
+    encrypted_dir=encrypted_dir,
+)
 
 # read files in plain_dir, encrypt and write files into encrypted_dir if needed using 12 workers
-crypt_dir.write_encrypted_dir(key_file=key_file, plain_dir=plain_dir, encrypted_dir=encrypted_dir, max_workers=12)
-
+crypt_dir.write_encrypted_dir_if_needed(
+    key_file=key_file,
+    plain_dir=plain_dir,
+    encrypted_dir=encrypted_dir,
+    max_workers=12,
+)
 ```
 
 - restore
@@ -31,13 +38,18 @@ crypt_dir.write_encrypted_dir(key_file=key_file, plain_dir=plain_dir, encrypted_
 ```python
 import crypt_dir
 
-key_file="/Users/khanh/Documents/drive/key.txt"
-plain_dir = "/Users/khanh/Documents/private"
-encrypted_dir = "/Users/khanh/Documents/drive/private"
-decrypted_dir = "/Users/khanh/Documents/private_restored"
+key_file = "key.txt"
+plain_dir = "plain"
+encrypted_dir = "encrypted"
+restored_dir = "restored"
 
-# decrypt all files in encrypted_dir using 12 workers
-crypt_dir.read_encrypted_dir(key_file=key_file, encrypted_dir=encrypted_dir, decrypted_dir=decrypted_dir, max_workers=12)
+# restore all files in encrypted_dir using 12 workers
+crypt_dir.restore_encrypted_dir(
+    key_file=key_file,
+    encrypted_dir=encrypted_dir,
+    restored_dir=restored_dir,
+    max_workers=12,
+)
 ```
 
 # INSTALLATION

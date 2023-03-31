@@ -93,7 +93,7 @@ def copy_dir_structure(dir_in: str, dir_out: str):
             os.makedirs(path_out)
 
 
-def write_encrypted_dir(key_file: str, plain_dir: str, encrypted_dir: str, max_workers: int | None = None):
+def write_encrypted_dir_if_needed(key_file: str, plain_dir: str, encrypted_dir: str, max_workers: int | None = None):
     """
     read files in plain_dir, encrypt and write files into encrypted_dir if needed
     :param plain_dir:
@@ -129,22 +129,22 @@ def is_encrypted_file(path: str) -> bool:
     return path.endswith(f".{ENCRYPTED_EXT}")
 
 
-def read_encrypted_dir(key_file: str, encrypted_dir: str, decrypted_dir: str, max_workers: int | None = None):
+def restore_encrypted_dir(key_file: str, encrypted_dir: str, restored_dir: str, max_workers: int | None = None):
     """
     decrypt all files in encrypted_dir
-    :param decrypted_dir:
+    :param restored_dir:
     :param encrypted_dir:
     :param key_file:
     :param max_workers:
     :return:
     """
     encrypted_dir = os.path.abspath(encrypted_dir)
-    decrypted_dir = os.path.abspath(decrypted_dir)
+    restored_dir = os.path.abspath(restored_dir)
     codec = Codec(key_file)
-    copy_dir_structure(encrypted_dir, decrypted_dir)
+    copy_dir_structure(encrypted_dir, restored_dir)
 
     def decrypt_file(encrypted_path: str):
-        decrypted_path = encrypted_path_to_plain_path(decrypted_dir, encrypted_dir, encrypted_path)
+        decrypted_path = encrypted_path_to_plain_path(restored_dir, encrypted_dir, encrypted_path)
         try:
             os.makedirs(os.path.dirname(decrypted_path))
         except FileExistsError:
