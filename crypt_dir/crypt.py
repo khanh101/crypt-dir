@@ -10,7 +10,7 @@ BLOCK_SIZE = AES.block_size  # size of AES block in bytes
 KEY_SIZE = 32  # size of AES key in bytes
 AES_MODE = AES.MODE_CBC  # cipher block chaining
 CHUNK_SIZE = 2 ** 30  # 1 GB # chunk size to read from io in bytes
-IV_SIZE = 16  # size of iv in bytes
+IV_SIZE = BLOCK_SIZE  # size of iv in bytes
 
 
 def random_bytes(count: int = 1) -> bytes:
