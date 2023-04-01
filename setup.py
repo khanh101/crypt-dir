@@ -12,9 +12,7 @@ if __name__ == "__main__":
         long_description_content_type="text/markdown",
         url="https://github.com/khanh-nguyen-code/crypt-dir",
         packages=setuptools.find_packages(),
-        classifiers=[
-            "License :: OSI Approved :: MIT",
-        ],
+        license="MIT",
         install_requires=[
             "pycryptodomex==3.17",
         ],
