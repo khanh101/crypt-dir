@@ -5,7 +5,7 @@ if __name__ == "__main__":
         long_description = f.read()
     setuptools.setup(
         name="crypt-dir",
-        version="1.0.10",
+        version="1.0.11",
         author="Nguyen Ngoc Khanh",
         author_email="khanh.nguyen.contact@gmail.com",
         long_description=long_description,
@@ -13,7 +13,7 @@ if __name__ == "__main__":
         url="https://github.com/khanh-nguyen-code/crypt-dir",
         packages=setuptools.find_packages(),
         classifiers=[
-        "License :: OSI Approved :: MIT",
+            "License :: OSI Approved :: MIT",
         ],
         install_requires=[
             "pycryptodomex==3.17",
