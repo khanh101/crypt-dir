@@ -6,8 +6,8 @@ import os
 from dataclasses import dataclass
 from typing import BinaryIO
 
-from .crypt import aes256_encrypt, aes256_decrypt, sha1_hash, random_bytes, IV_SIZE, KEY_SIZE
-from .sig import get_file_signature, FILE_SIGNATURE_SIZE, get_key_signature, KEY_SIGNATURE_SIZE, set_file_signature
+from .crypt import aes256_encrypt, aes256_decrypt, sha1_hash, random_bytes, BLOCK_SIZE, KEY_SIZE
+from .sig import get_file_sig, FILE_SIG_SIZE, get_key_sig, KEY_SIG_SIZE, set_file_signature
 from .util import uint64_to_bytes, bytes_to_uint64, write_hex_file, read_hex_file, UINT64_SIZE
 
 
@@ -16,22 +16,22 @@ class Header:
     file_sig: bytes
     key_sig: bytes
     file_size: int
-    iv: bytes
+    init_vec: bytes
 
 
 def read_header(read_io: BinaryIO) -> Header:
-    file_sig = read_io.read(FILE_SIGNATURE_SIZE)
-    key_sig = read_io.read(KEY_SIGNATURE_SIZE)
+    file_sig = read_io.read(FILE_SIG_SIZE)
+    key_sig = read_io.read(KEY_SIG_SIZE)
     file_size = bytes_to_uint64(read_io.read(UINT64_SIZE))
-    iv = read_io.read(IV_SIZE)
-    return Header(file_sig=file_sig, key_sig=key_sig, file_size=file_size, iv=iv)
+    init_vec = read_io.read(BLOCK_SIZE)
+    return Header(file_sig=file_sig, key_sig=key_sig, file_size=file_size, init_vec=init_vec)
 
 
 def write_header(write_io: BinaryIO, header: Header):
     write_io.write(header.file_sig)
     write_io.write(header.key_sig)
     write_io.write(uint64_to_bytes(header.file_size))
-    write_io.write(header.iv)
+    write_io.write(header.init_vec)
 
 
 def aes256_encrypt_file_if_needed(
@@ -39,8 +39,8 @@ def aes256_encrypt_file_if_needed(
         key_sig: bytes | None = None,
 ) -> bool:
     if key_sig is None:
-        key_sig = get_key_signature(key)
-    file_sig = get_file_signature(plain_path)
+        key_sig = get_key_sig(key)
+    file_sig = get_file_sig(plain_path)
     # check file updated
     if os.path.exists(encrypted_path):
         with open(encrypted_path, "rb") as f:
@@ -50,16 +50,16 @@ def aes256_encrypt_file_if_needed(
 
     # encrypted file will be updated regardless its mtime is sooner or later
     # encrypt
-    iv = random_bytes(IV_SIZE)
+    init_vec = random_bytes(BLOCK_SIZE)
     file_size = os.path.getsize(plain_path)
     with open(plain_path, "rb") as plain_f, open(encrypted_path, "wb") as encrypted_f:
         write_header(write_io=encrypted_f, header=Header(
             file_sig=file_sig,
             key_sig=key_sig,
             file_size=file_size,
-            iv=iv,
+            init_vec=init_vec,
         ))
-        aes256_encrypt(key=key, iv=iv, plain_read_io=plain_f, encrypted_write_io=encrypted_f)
+        aes256_encrypt(key=key, init_vec=init_vec, plain_read_io=plain_f, encrypted_write_io=encrypted_f)
     return True
 
 
@@ -68,12 +68,12 @@ def aes256_decrypt_file(
         key_sig: bytes | None = None,
 ):
     if key_sig is None:
-        key_sig = get_key_signature(key)
+        key_sig = get_key_sig(key)
     with open(encrypted_path, "rb") as encrypted_f, open(decrypted_path, "wb") as decrypted_f:
         header = read_header(encrypted_f)
         if header.key_sig != key_sig:
             raise RuntimeError(f"signature does not match for {encrypted_path}")
-        aes256_decrypt(key=key, iv=header.iv, file_size=header.file_size, encrypted_read_io=encrypted_f, decrypted_write_io=decrypted_f)
+        aes256_decrypt(key=key, init_vec=header.init_vec, file_size=header.file_size, encrypted_read_io=encrypted_f, decrypted_write_io=decrypted_f)
     # set file signature
     set_file_signature(path=decrypted_path, sig=header.file_sig)
 
@@ -83,7 +83,7 @@ class Codec:
         """
         Codec: encrypt and decrypt a file
         encrypted file structure
-        |file_sig|key_sig|file_size|iv|encrypted_data|
+        |file_sig|key_sig|file_size|init_vec|encrypted_data|
 
         :param key_path: path to key file in hex
         """

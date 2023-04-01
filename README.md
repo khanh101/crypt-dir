@@ -79,13 +79,13 @@ You don't need to know the specification. For some folks who want to know exactl
     - `file_sig`: little-endian encoded mtime of file in uint64
     - `key_sig`: `SHA1` bytes of key
     - `file_size`: little-endian encoded file size in uint64
-    - `iv`: `AES256` initialization vector
+    - `init_vec`: `AES256` initialization vector
 
   - `file encrypted`: `AES256` file encrypted bytes with chunk size of `2^30`
 
 ```
 |                                      header                            |   encrypted_data  |
-|   file_sig         |   key_sig         |   file_size   |   iv          |   encrypted_data  |
+|   file_sig         |   key_sig         |   file_size   |   init_vec    |   encrypted_data  |
 |   8 bytes          |   20 bytes        |   8 bytes     |   16 bytes    |   n bytes         |
 ```
 

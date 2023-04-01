@@ -10,7 +10,6 @@ BLOCK_SIZE = AES.block_size  # size of AES block in bytes
 KEY_SIZE = 32  # size of AES key in bytes
 AES_MODE = AES.MODE_CBC  # cipher block chaining
 CHUNK_SIZE = 2 ** 30  # 1 GB # chunk size to read from io in bytes
-IV_SIZE = BLOCK_SIZE  # size of iv in bytes
 
 
 def random_bytes(count: int = 1) -> bytes:
@@ -28,12 +27,12 @@ def sha1_hash(f_in: BinaryIO) -> bytes:
         h.update(chunk)
 
 
-def aes256_encrypt(key: bytes, iv: bytes, plain_read_io: BinaryIO, encrypted_write_io: BinaryIO):
+def aes256_encrypt(key: bytes, init_vec: bytes, plain_read_io: BinaryIO, encrypted_write_io: BinaryIO):
     assert BLOCK_SIZE == 16
     assert CHUNK_SIZE % BLOCK_SIZE == 0
-    assert len(iv) == BLOCK_SIZE
+    assert len(init_vec) == BLOCK_SIZE
     assert len(key) == KEY_SIZE
-    aes = AES.new(key, AES_MODE, iv)
+    aes = AES.new(key, AES_MODE, init_vec)
     while True:
         chunk = plain_read_io.read(CHUNK_SIZE)
         if len(chunk) == 0:
@@ -44,12 +43,12 @@ def aes256_encrypt(key: bytes, iv: bytes, plain_read_io: BinaryIO, encrypted_wri
         encrypted_write_io.write(b)
 
 
-def aes256_decrypt(key: bytes, iv: bytes, file_size: int, encrypted_read_io: BinaryIO, decrypted_write_io: BinaryIO):
+def aes256_decrypt(key: bytes, init_vec: bytes, file_size: int, encrypted_read_io: BinaryIO, decrypted_write_io: BinaryIO):
     assert BLOCK_SIZE == 16
     assert CHUNK_SIZE % BLOCK_SIZE == 0
-    assert len(iv) == BLOCK_SIZE
+    assert len(init_vec) == BLOCK_SIZE
     assert len(key) == KEY_SIZE
-    aes = AES.new(key, AES_MODE, iv)
+    aes = AES.new(key, AES_MODE, init_vec)
     remaining_size = file_size
     while True:
         chunk = encrypted_read_io.read(CHUNK_SIZE)
@@ -65,19 +64,19 @@ def aes256_decrypt(key: bytes, iv: bytes, file_size: int, encrypted_read_io: Bin
 if __name__ == "__main__":
     key = random_bytes(KEY_SIZE)
     sig = sha1_hash(io.BytesIO(key))
-    iv = random_bytes(IV_SIZE)
+    init_vec = random_bytes(BLOCK_SIZE)
     plain = b"hello world, this is an example message"
     print("plain", plain)
 
     encrypted_io = io.BytesIO()
-    aes256_encrypt(key, iv, io.BytesIO(plain), encrypted_io)
+    aes256_encrypt(key, init_vec, io.BytesIO(plain), encrypted_io)
     encrypted_io.seek(0)
     encrypted = encrypted_io.read()
     print("encrypted", encrypted)
 
     encrypted_io.seek(0)
     decrypted_io = io.BytesIO()
-    aes256_decrypt(key, iv, len(plain), encrypted_io, decrypted_io)
+    aes256_decrypt(key, init_vec, len(plain), encrypted_io, decrypted_io)
     decrypted_io.seek(0)
     decrypted = decrypted_io.read()
     print("decrypt", decrypted)
