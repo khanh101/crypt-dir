@@ -44,13 +44,13 @@ def aes256_encrypt(key: bytes, iv: bytes, plain_read_io: BinaryIO, encrypted_wri
         encrypted_write_io.write(b)
 
 
-def aes256_decrypt(key: bytes, iv: bytes, size: int, encrypted_read_io: BinaryIO, decrypted_write_io: BinaryIO):
+def aes256_decrypt(key: bytes, iv: bytes, file_size: int, encrypted_read_io: BinaryIO, decrypted_write_io: BinaryIO):
     assert BLOCK_SIZE == 16
     assert CHUNK_SIZE % BLOCK_SIZE == 0
     assert len(iv) == BLOCK_SIZE
     assert len(key) == KEY_SIZE
     aes = AES.new(key, AES_MODE, iv)
-    remaining_size = size
+    remaining_size = file_size
     while True:
         chunk = encrypted_read_io.read(CHUNK_SIZE)
         if len(chunk) == 0:

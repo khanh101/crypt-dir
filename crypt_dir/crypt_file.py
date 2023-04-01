@@ -15,22 +15,22 @@ from .util import uint64_to_bytes, bytes_to_uint64, write_hex_file, read_hex_fil
 class Header:
     file_sig: bytes
     key_sig: bytes
-    size: int
+    file_size: int
     iv: bytes
 
 
 def read_header(read_io: BinaryIO) -> Header:
     file_sig = read_io.read(FILE_SIGNATURE_SIZE)
     key_sig = read_io.read(KEY_SIGNATURE_SIZE)
-    size = bytes_to_uint64(read_io.read(UINT64_SIZE))
+    file_size = bytes_to_uint64(read_io.read(UINT64_SIZE))
     iv = read_io.read(IV_SIZE)
-    return Header(file_sig=file_sig, key_sig=key_sig, size=size, iv=iv)
+    return Header(file_sig=file_sig, key_sig=key_sig, file_size=file_size, iv=iv)
 
 
 def write_header(write_io: BinaryIO, header: Header):
     write_io.write(header.file_sig)
     write_io.write(header.key_sig)
-    write_io.write(uint64_to_bytes(header.size))
+    write_io.write(uint64_to_bytes(header.file_size))
     write_io.write(header.iv)
 
 
@@ -51,12 +51,12 @@ def aes256_encrypt_file_if_needed(
     # encrypted file will be updated regardless its mtime is sooner or later
     # encrypt
     iv = random_bytes(IV_SIZE)
-    size = os.path.getsize(plain_path)
+    file_size = os.path.getsize(plain_path)
     with open(plain_path, "rb") as plain_f, open(encrypted_path, "wb") as encrypted_f:
         write_header(write_io=encrypted_f, header=Header(
             file_sig=file_sig,
             key_sig=key_sig,
-            size=size,
+            file_size=file_size,
             iv=iv,
         ))
         aes256_encrypt(key=key, iv=iv, plain_read_io=plain_f, encrypted_write_io=encrypted_f)
@@ -73,7 +73,7 @@ def aes256_decrypt_file(
         header = read_header(encrypted_f)
         if header.key_sig != key_sig:
             raise RuntimeError(f"signature does not match for {encrypted_path}")
-        aes256_decrypt(key=key, iv=header.iv, size=header.size, encrypted_read_io=encrypted_f, decrypted_write_io=decrypted_f)
+        aes256_decrypt(key=key, iv=header.iv, file_size=header.file_size, encrypted_read_io=encrypted_f, decrypted_write_io=decrypted_f)
     # set file signature
     set_file_signature(path=decrypted_path, sig=header.file_sig)
 
@@ -83,7 +83,7 @@ class Codec:
         """
         Codec: encrypt and decrypt a file
         encrypted file structure
-        |file_signature|key_signature|file_size|iv|encrypted_data|
+        |file_sig|key_sig|file_size|iv|encrypted_data|
 
         :param key_path: path to key file in hex
         """
