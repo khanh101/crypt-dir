@@ -13,12 +13,11 @@
 # User maintains two directories plain_dir and encrypted_dir
 import crypt_dir
 
-key_file = "key.txt"
 plain_dir = "plain"
 encrypted_dir = "encrypted"
 restored_dir = "restored"
 
-key = crypt_dir.read_or_create_key(key_file)
+key = crypt_dir.make_key_from_password(b"password1234")
 
 # Delete all files, directories in encrypted_dir that don't exist in the plain_dir
 crypt_dir.clean_encrypted_dir(
@@ -40,12 +39,11 @@ crypt_dir.update_encrypted_dir(
 ```python
 import crypt_dir
 
-key_file = "key.txt"
 plain_dir = "plain"
 encrypted_dir = "encrypted"
 restored_dir = "restored"
 
-key = crypt_dir.read_or_create_key(key_file)
+key = crypt_dir.make_key_from_password(b"password1234")
 
 # restore all files in encrypted_dir using 12 workers
 crypt_dir.restore_encrypted_dir(

@@ -1,3 +1,4 @@
+import io
 import os
 from typing import BinaryIO
 
@@ -75,4 +76,11 @@ def read_or_create_key(key_path: str) -> bytes:
         write_hex_file(key_path, os.urandom(KEY_SIZE))
 
     key = read_hex_file(key_path)
+    return key
+
+
+def make_key_from_password(password: bytes) -> bytes:
+    hash = sha1_hash(io.BytesIO(password))
+    hash += hash * (KEY_SIZE // HASH_SIZE)
+    key = hash[:KEY_SIZE]
     return key
