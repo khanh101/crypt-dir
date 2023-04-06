@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import io
 import os
+import sys
 from dataclasses import dataclass
 from typing import BinaryIO
 
@@ -21,9 +22,14 @@ class Header:
 
 def read_header(read_io: BinaryIO) -> Header:
     file_sig = read_io.read(FILE_SIG_SIZE)
+    assert len(file_sig) == FILE_SIG_SIZE, "read file_sig failed"
     key_sig = read_io.read(KEY_SIG_SIZE)
-    file_size = bytes_to_uint64(read_io.read(UINT64_SIZE))
+    assert len(key_sig) == KEY_SIG_SIZE, "read key_sig failed"
+    file_size_buf = read_io.read(UINT64_SIZE)
+    assert len(file_size_buf) == UINT64_SIZE, "read file_size failed"
+    file_size = bytes_to_uint64(file_size_buf)
     init_vec = read_io.read(BLOCK_SIZE)
+    assert len(init_vec) == BLOCK_SIZE, "read init_vec failed"
     return Header(file_sig=file_sig, key_sig=key_sig, file_size=file_size, init_vec=init_vec)
 
 
@@ -43,11 +49,14 @@ def aes256_encrypt_file_if_needed(
     file_sig = get_file_sig(plain_path)
     # check file updated
     if os.path.exists(encrypted_path):
-        with open(encrypted_path, "rb") as f:
-            header = read_header(f)
-        if key_sig == header.key_sig and file_sig == header.file_sig:
-            # only skip if both key_sig and file_sig are the same
-            return False
+        try:
+            with open(encrypted_path, "rb") as f:
+                header = read_header(f)
+            if key_sig == header.key_sig and file_sig == header.file_sig:
+                # only skip if both key_sig and file_sig are the same
+                return False
+        except Exception as e:
+            print(f"warning: encrypted file corrupted {encrypted_path}", file=sys.stderr)
 
     # encrypted file will be updated regardless its mtime is sooner or later
     # encrypt
