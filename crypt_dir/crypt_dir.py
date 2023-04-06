@@ -162,4 +162,4 @@ def restore_encrypted_dir(key: bytes, encrypted_dir: str, restored_dir: str, max
         for future in concurrent.futures.as_completed(future_list):
             decrypted, path = future.result()
             if decrypted:
-                print(f"decrypted: {path}", file=sys.stderr, flush=True)
+                print(f"decrypted: {path}", file=sys.stderr)
