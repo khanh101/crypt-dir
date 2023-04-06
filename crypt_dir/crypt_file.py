@@ -21,15 +21,14 @@ class Header:
 
 
 def read_header(read_io: BinaryIO) -> Header:
-    file_sig = read_io.read(FILE_SIG_SIZE)
-    assert len(file_sig) == FILE_SIG_SIZE, "read file_sig failed"
-    key_sig = read_io.read(KEY_SIG_SIZE)
-    assert len(key_sig) == KEY_SIG_SIZE, "read key_sig failed"
-    file_size_buf = read_io.read(UINT64_SIZE)
-    assert len(file_size_buf) == UINT64_SIZE, "read file_size failed"
-    file_size = bytes_to_uint64(file_size_buf)
-    init_vec = read_io.read(BLOCK_SIZE)
-    assert len(init_vec) == BLOCK_SIZE, "read init_vec failed"
+    def read_exact(n: int) -> bytes:
+        b = read_io.read(n)
+        assert len(b) == n, "read error"
+        return b
+    file_sig = read_exact(FILE_SIG_SIZE)
+    key_sig = read_exact(KEY_SIG_SIZE)
+    file_size = bytes_to_uint64(read_exact(UINT64_SIZE))
+    init_vec = read_exact(BLOCK_SIZE)
     return Header(file_sig=file_sig, key_sig=key_sig, file_size=file_size, init_vec=init_vec)
 
 
