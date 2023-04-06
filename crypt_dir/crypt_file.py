@@ -45,7 +45,8 @@ def aes256_encrypt_file_if_needed(
     if os.path.exists(encrypted_path):
         with open(encrypted_path, "rb") as f:
             header = read_header(f)
-        if file_sig == header.file_sig:
+        if key_sig == header.key_sig and file_sig == header.file_sig:
+            # only skip if both key_sig and file_sig are the same
             return False
 
     # encrypted file will be updated regardless its mtime is sooner or later
