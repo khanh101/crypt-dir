@@ -17,10 +17,10 @@ def delete_if_ok(encrypted_path: str):
     if os.path.exists(encrypted_path):
         if os.path.isfile(encrypted_path):
             os.remove(encrypted_path)
-            sys.stdout.write(f"deleted: {encrypted_path}\n")
-        if os.path.isdir(encrypted_path):
+            print(f"deleted: {encrypted_path}", file=sys.stderr)
+        elif os.path.isdir(encrypted_path):
             shutil.rmtree(encrypted_path)
-            sys.stdout.write(f"deleted: {encrypted_path}\n")
+            print(f"deleted: {encrypted_path}", file=sys.stderr)
 
 
 def walk_file(path: str, skip_mount: bool = True, skip_link: bool = True) -> Iterator[str]:
@@ -125,7 +125,7 @@ def update_encrypted_dir(key: bytes, plain_dir: str, encrypted_dir: str, max_wor
         for future in concurrent.futures.as_completed(future_list):
             encrypted, encrypted_path = future.result()
             if encrypted:
-                sys.stdout.write(f"encrypted: {encrypted_path}\n")
+                print(f"encrypted: {encrypted_path}", file=sys.stderr)
 
 
 def is_encrypted_file(path: str) -> bool:
@@ -162,4 +162,4 @@ def restore_encrypted_dir(key: bytes, encrypted_dir: str, restored_dir: str, max
         for future in concurrent.futures.as_completed(future_list):
             decrypted, path = future.result()
             if decrypted:
-                sys.stdout.write(f"decrypted: {path}\n")
+                print(f"decrypted: {path}", file=sys.stderr, flush=True)
