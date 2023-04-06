@@ -18,18 +18,20 @@ plain_dir = "plain"
 encrypted_dir = "encrypted"
 restored_dir = "restored"
 
+key = crypt_dir.read_or_create_key(key_file)
+
 # Delete all files, directories in encrypted_dir that don't exist in the plain_dir
 crypt_dir.clean_encrypted_dir(
-  plain_dir=plain_dir,
-  encrypted_dir=encrypted_dir,
+    plain_dir=plain_dir,
+    encrypted_dir=encrypted_dir,
 )
 
 # read files in plain_dir, encrypt and write files into encrypted_dir if needed using 12 workers
 crypt_dir.update_encrypted_dir(
-  key_file=key_file,
-  plain_dir=plain_dir,
-  encrypted_dir=encrypted_dir,
-  max_workers=12,
+    key=key,
+    plain_dir=plain_dir,
+    encrypted_dir=encrypted_dir,
+    max_workers=12,
 )
 ```
 
@@ -43,9 +45,11 @@ plain_dir = "plain"
 encrypted_dir = "encrypted"
 restored_dir = "restored"
 
+key = crypt_dir.read_or_create_key(key_file)
+
 # restore all files in encrypted_dir using 12 workers
 crypt_dir.restore_encrypted_dir(
-    key_file=key_file,
+    key=key,
     encrypted_dir=encrypted_dir,
     restored_dir=restored_dir,
     max_workers=12,
@@ -58,12 +62,12 @@ crypt_dir.restore_encrypted_dir(
 pip install --upgrade crypt-dir
 ```
 
-
 # DECRYPT IT YOURSELF
 
 ## SPECIFICATION 1.*
 
-You don't need to know the specification. For some folks who want to know exactly what happened with their files, here is the specification for `key_file` and `.enc` files:
+You don't need to know the specification. For some folks who want to know exactly what happened with their files, here
+is the specification for `key_file` and `.enc` files:
 
 - if `key_file` does not exist, `crypt_dir` will create a random key of 32 bytes using `os.urandom` encoded into `hex`
 
@@ -75,13 +79,13 @@ You don't need to know the specification. For some folks who want to know exactl
 
 - `.enc1` file
 
-  - `header`:
-    - `file_sig`: little-endian encoded mtime of file in uint64
-    - `key_sig`: `SHA1` bytes of key
-    - `file_size`: little-endian encoded file size in uint64
-    - `init_vec`: `AES256` initialization vector
+    - `header`:
+        - `file_sig`: little-endian encoded mtime of file in uint64
+        - `key_sig`: `SHA1` bytes of key
+        - `file_size`: little-endian encoded file size in uint64
+        - `init_vec`: `AES256` initialization vector
 
-  - `file encrypted`: `AES256` file encrypted bytes with chunk size of `2^30`
+    - `file encrypted`: `AES256` file encrypted bytes with chunk size of `2^30`
 
 ```
 |                                      header                            |   encrypted_data  |
@@ -91,7 +95,8 @@ You don't need to know the specification. For some folks who want to know exactl
 
 ## SPECIFICATION 0.*
 
-You don't need to know the specification. For some folks who want to know exactly what happened with their files, here is the specification for `key_file` and `.enc` files:
+You don't need to know the specification. For some folks who want to know exactly what happened with their files, here
+is the specification for `key_file` and `.enc` files:
 
 - if `key_file` does not exist, `crypt_dir` will create a random key of 32 bytes using `os.urandom` encoded into `hex`
 

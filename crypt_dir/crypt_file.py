@@ -6,9 +6,9 @@ import os
 from dataclasses import dataclass
 from typing import BinaryIO
 
-from .crypt import aes256_encrypt, aes256_decrypt, sha1_hash, random_bytes, BLOCK_SIZE, KEY_SIZE
-from .sig import get_file_sig, FILE_SIG_SIZE, get_key_sig, KEY_SIG_SIZE, set_file_signature
-from .util import uint64_to_bytes, bytes_to_uint64, write_hex_file, read_hex_file, UINT64_SIZE
+from .crypt import aes256_encrypt, aes256_decrypt, sha1_hash, BLOCK_SIZE, KEY_SIZE
+from .serialize import uint64_to_bytes, bytes_to_uint64, UINT64_SIZE
+from .signature import get_file_sig, FILE_SIG_SIZE, get_key_sig, KEY_SIG_SIZE, set_file_signature
 
 
 @dataclass
@@ -51,7 +51,7 @@ def aes256_encrypt_file_if_needed(
 
     # encrypted file will be updated regardless its mtime is sooner or later
     # encrypt
-    init_vec = random_bytes(BLOCK_SIZE)
+    init_vec = os.urandom(BLOCK_SIZE)
     file_size = os.path.getsize(plain_path)
     with open(plain_path, "rb") as plain_f, open(encrypted_path, "wb") as encrypted_f:
         write_header(write_io=encrypted_f, header=Header(
@@ -74,23 +74,23 @@ def aes256_decrypt_file(
         header = read_header(encrypted_f)
         if header.key_sig != key_sig:
             raise RuntimeError(f"signature does not match for {encrypted_path}")
-        aes256_decrypt(key=key, init_vec=header.init_vec, file_size=header.file_size, encrypted_read_io=encrypted_f, decrypted_write_io=decrypted_f)
+        aes256_decrypt(key=key, init_vec=header.init_vec, file_size=header.file_size, encrypted_read_io=encrypted_f,
+                       decrypted_write_io=decrypted_f)
     # set file signature
     set_file_signature(path=decrypted_path, sig=header.file_sig)
 
 
 class Codec:
-    def __init__(self, key_path: str):
+    def __init__(self, key: bytes):
         """
         Codec: encrypt and decrypt a file
         encrypted file structure
         |file_sig|key_sig|file_size|init_vec|encrypted_data|
 
-        :param key_path: path to key file in hex
+        :param key: key
         """
-        if not os.path.exists(key_path):
-            write_hex_file(key_path, random_bytes(KEY_SIZE))
-        self.key = read_hex_file(key_path)
+        assert len(key) == KEY_SIZE
+        self.key = key
         self.sig = sha1_hash(io.BytesIO(self.key))
 
     def encrypt_file_if_needed(self, plain_path: str, encrypted_path: str) -> bool:

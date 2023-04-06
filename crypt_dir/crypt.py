@@ -1,4 +1,3 @@
-import io
 import os
 from typing import BinaryIO
 
@@ -12,10 +11,6 @@ AES_MODE = AES.MODE_CBC  # cipher block chaining
 CHUNK_SIZE = 2 ** 30  # 1 GB # chunk size to read from io in bytes
 
 
-def random_bytes(count: int = 1) -> bytes:
-    return os.urandom(count)
-
-
 def sha1_hash(f_in: BinaryIO) -> bytes:
     h = SHA1.new()
     while True:
@@ -27,7 +22,10 @@ def sha1_hash(f_in: BinaryIO) -> bytes:
         h.update(chunk)
 
 
-def aes256_encrypt(key: bytes, init_vec: bytes, plain_read_io: BinaryIO, encrypted_write_io: BinaryIO):
+def aes256_encrypt(
+        key: bytes, init_vec: bytes,
+        plain_read_io: BinaryIO, encrypted_write_io: BinaryIO,
+):
     assert BLOCK_SIZE == 16
     assert CHUNK_SIZE % BLOCK_SIZE == 0
     assert len(init_vec) == BLOCK_SIZE
@@ -43,7 +41,10 @@ def aes256_encrypt(key: bytes, init_vec: bytes, plain_read_io: BinaryIO, encrypt
         encrypted_write_io.write(b)
 
 
-def aes256_decrypt(key: bytes, init_vec: bytes, file_size: int, encrypted_read_io: BinaryIO, decrypted_write_io: BinaryIO):
+def aes256_decrypt(
+        key: bytes, init_vec: bytes, file_size: int,
+        encrypted_read_io: BinaryIO, decrypted_write_io: BinaryIO,
+):
     assert BLOCK_SIZE == 16
     assert CHUNK_SIZE % BLOCK_SIZE == 0
     assert len(init_vec) == BLOCK_SIZE
@@ -61,23 +62,17 @@ def aes256_decrypt(key: bytes, init_vec: bytes, file_size: int, encrypted_read_i
         remaining_size -= len(b)
 
 
-if __name__ == "__main__":
-    key = random_bytes(KEY_SIZE)
-    sig = sha1_hash(io.BytesIO(key))
-    init_vec = random_bytes(BLOCK_SIZE)
-    plain = b"hello world, this is an example message"
-    print("plain", plain)
+def read_or_create_key(key_path: str) -> bytes:
+    def read_hex_file(path: str) -> bytes:
+        with open(path, "r") as f:
+            return bytes.fromhex(f.read())
 
-    encrypted_io = io.BytesIO()
-    aes256_encrypt(key, init_vec, io.BytesIO(plain), encrypted_io)
-    encrypted_io.seek(0)
-    encrypted = encrypted_io.read()
-    print("encrypted", encrypted)
+    def write_hex_file(path: str, b: bytes):
+        with open(path, "w") as f:
+            f.write(b.hex())
 
-    encrypted_io.seek(0)
-    decrypted_io = io.BytesIO()
-    aes256_decrypt(key, init_vec, len(plain), encrypted_io, decrypted_io)
-    decrypted_io.seek(0)
-    decrypted = decrypted_io.read()
-    print("decrypt", decrypted)
-    assert plain == decrypted
+    if not os.path.exists(key_path):
+        write_hex_file(key_path, os.urandom(KEY_SIZE))
+
+    key = read_hex_file(key_path)
+    return key

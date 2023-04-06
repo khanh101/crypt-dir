@@ -2,7 +2,7 @@ import io
 import os
 
 from .crypt import sha1_hash, HASH_SIZE
-from .util import uint64_to_bytes, UINT64_SIZE, bytes_to_uint64
+from .serialize import uint64_to_bytes, UINT64_SIZE, bytes_to_uint64
 
 KEY_SIG_SIZE = HASH_SIZE
 FILE_SIG_SIZE = UINT64_SIZE

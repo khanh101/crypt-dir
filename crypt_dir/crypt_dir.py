@@ -7,6 +7,7 @@ import shutil
 import sys
 from typing import *
 
+from .crypt import KEY_SIZE
 from .crypt_file import Codec
 
 ENCRYPTED_EXT = "enc1"
@@ -94,18 +95,19 @@ def copy_dir_structure(dir_in: str, dir_out: str):
             os.makedirs(path_out)
 
 
-def update_encrypted_dir(key_file: str, plain_dir: str, encrypted_dir: str, max_workers: int | None = None):
+def update_encrypted_dir(key: bytes, plain_dir: str, encrypted_dir: str, max_workers: int | None = None):
     """
     read files in plain_dir, encrypt and write files into encrypted_dir if needed
     :param plain_dir:
     :param encrypted_dir:
-    :param key_file:
+    :param key:
     :param max_workers:
     :return:
     """
+    assert len(key) == KEY_SIZE
     plain_dir = os.path.abspath(plain_dir)
     encrypted_dir = os.path.abspath(encrypted_dir)
-    codec = Codec(key_file)
+    codec = Codec(key)
     copy_dir_structure(plain_dir, encrypted_dir)
 
     def make_dir_and_encrypt_file_if_needed(plain_path: str):
@@ -130,18 +132,19 @@ def is_encrypted_file(path: str) -> bool:
     return path.endswith(f".{ENCRYPTED_EXT}")
 
 
-def restore_encrypted_dir(key_file: str, encrypted_dir: str, restored_dir: str, max_workers: int | None = None):
+def restore_encrypted_dir(key: bytes, encrypted_dir: str, restored_dir: str, max_workers: int | None = None):
     """
     decrypt all files in encrypted_dir
     :param restored_dir:
     :param encrypted_dir:
-    :param key_file:
+    :param key:
     :param max_workers:
     :return:
     """
+    assert len(key) == KEY_SIZE
     encrypted_dir = os.path.abspath(encrypted_dir)
     restored_dir = os.path.abspath(restored_dir)
-    codec = Codec(key_file)
+    codec = Codec(key)
     copy_dir_structure(encrypted_dir, restored_dir)
 
     def decrypt_file(encrypted_path: str):
