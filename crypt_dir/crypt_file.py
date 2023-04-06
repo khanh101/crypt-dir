@@ -55,8 +55,8 @@ def aes256_encrypt_file_if_needed(
             if key_sig == header.key_sig and file_sig == header.file_sig:
                 # only skip if both key_sig and file_sig are the same
                 return False
-        except Exception as e:
-            print(f"warning: encrypted file corrupted {encrypted_path}", file=sys.stderr)
+        except AssertionError:
+            print(f"warning: corrupted encrypted file {encrypted_path}", file=sys.stderr)
 
     # encrypted file will be updated regardless its mtime is sooner or later
     # encrypt
