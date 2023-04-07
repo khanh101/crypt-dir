@@ -39,7 +39,9 @@ def aes256_encrypt(
             return
         if len(chunk) % BLOCK_SIZE != 0:
             chunk += b"\0" * (BLOCK_SIZE - len(chunk) % BLOCK_SIZE)  # pad 0s until multiples of BLOCK_SIZE
+
         b = aes.encrypt(chunk)
+
         encrypted_write_io.write(b)
 
 
