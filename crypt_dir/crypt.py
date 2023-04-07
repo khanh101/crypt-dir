@@ -11,6 +11,9 @@ KEY_SIZE = 32  # size of AES key in bytes
 AES_MODE = AES.MODE_CBC  # cipher block chaining
 CHUNK_SIZE = 2 ** 30  # 1 GB # chunk size to read from io in bytes
 
+assert BLOCK_SIZE == 16
+assert CHUNK_SIZE % BLOCK_SIZE == 0
+
 
 def sha1_hash(f_in: BinaryIO) -> bytes:
     h = SHA1.new()
@@ -27,8 +30,6 @@ def aes256_encrypt(
         key: bytes, init_vec: bytes,
         plain_read_io: BinaryIO, encrypted_write_io: BinaryIO,
 ):
-    assert BLOCK_SIZE == 16
-    assert CHUNK_SIZE % BLOCK_SIZE == 0
     assert len(init_vec) == BLOCK_SIZE
     assert len(key) == KEY_SIZE
     aes = AES.new(key, AES_MODE, init_vec)
@@ -46,8 +47,6 @@ def aes256_decrypt(
         key: bytes, init_vec: bytes, file_size: int,
         encrypted_read_io: BinaryIO, decrypted_write_io: BinaryIO,
 ):
-    assert BLOCK_SIZE == 16
-    assert CHUNK_SIZE % BLOCK_SIZE == 0
     assert len(init_vec) == BLOCK_SIZE
     assert len(key) == KEY_SIZE
     aes = AES.new(key, AES_MODE, init_vec)
