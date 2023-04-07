@@ -1,5 +1,4 @@
 import io
-import os
 from typing import BinaryIO
 
 from Cryptodome.Cipher import AES
@@ -32,13 +31,14 @@ def aes256_encrypt(
 ):
     assert len(init_vec) == BLOCK_SIZE
     assert len(key) == KEY_SIZE
+
     aes = AES.new(key, AES_MODE, init_vec)
     while True:
         chunk = plain_read_io.read(CHUNK_SIZE)
         if len(chunk) == 0:
             return
         if len(chunk) % BLOCK_SIZE != 0:
-            chunk += b"\0" * (BLOCK_SIZE - len(chunk) % BLOCK_SIZE)  # padded with 0s until BLOCK_SIZE
+            chunk += b"\0" * (BLOCK_SIZE - len(chunk) % BLOCK_SIZE)  # pad 0s until multiples of BLOCK_SIZE
         b = aes.encrypt(chunk)
         encrypted_write_io.write(b)
 
@@ -49,33 +49,20 @@ def aes256_decrypt(
 ):
     assert len(init_vec) == BLOCK_SIZE
     assert len(key) == KEY_SIZE
+
     aes = AES.new(key, AES_MODE, init_vec)
     remaining_size = file_size
-    while True:
+    while remaining_size > 0:
         chunk = encrypted_read_io.read(CHUNK_SIZE)
-        if len(chunk) == 0:
-            return
+        assert len(chunk) == CHUNK_SIZE, "corrupted_file"
+
         b = aes.decrypt(chunk)
+
         if remaining_size < len(b):
             b = b[:remaining_size]
-        decrypted_write_io.write(b)
         remaining_size -= len(b)
 
-
-def read_or_create_key(key_path: str) -> bytes:
-    def read_hex_file(path: str) -> bytes:
-        with open(path, "r") as f:
-            return bytes.fromhex(f.read())
-
-    def write_hex_file(path: str, b: bytes):
-        with open(path, "w") as f:
-            f.write(b.hex())
-
-    if not os.path.exists(key_path):
-        write_hex_file(key_path, os.urandom(KEY_SIZE))
-
-    key = read_hex_file(key_path)
-    return key
+        decrypted_write_io.write(b)
 
 
 def make_key_from_password(password: bytes) -> bytes:

@@ -23,7 +23,7 @@ class Header:
 def read_header(read_io: BinaryIO) -> Header:
     def read_exact(n: int) -> bytes:
         b = read_io.read(n)
-        assert len(b) == n, "read error"
+        assert len(b) == n, "corrupted_file"
         return b
     file_sig = read_exact(FILE_SIG_SIZE)
     key_sig = read_exact(KEY_SIG_SIZE)
@@ -68,7 +68,10 @@ def aes256_encrypt_file_if_needed(
             file_size=file_size,
             init_vec=init_vec,
         ))
-        aes256_encrypt(key=key, init_vec=init_vec, plain_read_io=plain_f, encrypted_write_io=encrypted_f)
+        aes256_encrypt(
+            key=key, init_vec=init_vec,
+            plain_read_io=plain_f, encrypted_write_io=encrypted_f,
+        )
     return True
 
 
@@ -82,8 +85,10 @@ def aes256_decrypt_file(
         header = read_header(encrypted_f)
         if header.key_sig != key_sig:
             raise RuntimeError(f"signature does not match for {encrypted_path}")
-        aes256_decrypt(key=key, init_vec=header.init_vec, file_size=header.file_size, encrypted_read_io=encrypted_f,
-                       decrypted_write_io=decrypted_f)
+        aes256_decrypt(
+            key=key, init_vec=header.init_vec, file_size=header.file_size,
+            encrypted_read_io=encrypted_f, decrypted_write_io=decrypted_f,
+        )
     # set file signature
     set_file_signature(path=decrypted_path, sig=header.file_sig)
 
