@@ -54,6 +54,28 @@ crypt_dir.restore_encrypted_dir(
 )
 ```
 
+- certificate
+
+```python
+import crypt_dir
+
+correct_password = b"password123"
+
+cert = crypt_dir.make_certificate(correct_password)
+print("cert", cert)
+
+try:
+    wrong_password = b"password456"
+    _ = crypt_dir.verify_certificate(cert, wrong_password)
+except AssertionError as e:
+    print("expected assertion error: ", e)
+
+key = crypt_dir.verify_certificate(cert, correct_password)
+
+print("generated key from correct password", key)
+
+```
+
 # INSTALLATION
 
 ```shell
