@@ -1,4 +1,6 @@
 import io
+import os
+from dataclasses import dataclass
 from typing import BinaryIO
 
 from Cryptodome.Cipher import AES
@@ -9,6 +11,7 @@ BLOCK_SIZE = AES.block_size  # size of AES block in bytes
 KEY_SIZE = 32  # size of AES key in bytes
 AES_MODE = AES.MODE_CBC  # cipher block chaining
 CHUNK_SIZE = 2 ** 30  # 1 GB # chunk size to read from io in bytes
+SALT_SIZE = 32  # size of salt
 
 assert BLOCK_SIZE == 16
 assert CHUNK_SIZE % BLOCK_SIZE == 0
@@ -72,3 +75,25 @@ def make_key_from_password(password: bytes) -> bytes:
     hash += hash * (KEY_SIZE // HASH_SIZE)
     key = hash[:KEY_SIZE]
     return key
+
+
+@dataclass
+class Certificate:
+    salt: bytes
+    key_hash: bytes
+
+
+def verify_certificate(cert: Certificate, password: bytes) -> bytes:
+    password_with_salt = cert.salt + password
+    key = make_key_from_password(password_with_salt)
+    key_hash = sha1_hash(io.BytesIO(key))
+    assert key_hash == cert.key_hash, "password_does_not_match"
+    return key
+
+
+def make_certificate(password: bytes) -> Certificate:
+    salt = os.urandom(SALT_SIZE)
+    password_with_salt = salt + password
+    key = make_key_from_password(password_with_salt)
+    key_hash = sha1_hash(io.BytesIO(key))
+    return Certificate(salt=salt, key_hash=key_hash)
