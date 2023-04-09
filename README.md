@@ -108,9 +108,12 @@ is the specification for `key_file` and `.enc` files:
     - `file encrypted`: `AES256` file encrypted bytes with chunk size of `2^30`
 
 ```
-|                                      header                            |   encrypted_data  |
-|   file_sig         |   key_sig         |   file_size   |   init_vec    |   encrypted_data  |
-|   8 bytes          |   20 bytes        |   8 bytes     |   16 bytes    |   n bytes         |
+__________________________________________________________________________________
+|                          header                           |   encrypted_data   |
+|___________________________________________________________|____________________|
+|   file_sig   |   key_sig   |   file_size   |   init_vec   |   encrypted_data   |
+|   8 bytes    |   20 bytes  |   8 bytes     |   16 bytes   |   n bytes          |
+|___________________________________________________________|____________________|
 ```
 
 ## SPECIFICATION 0.*
