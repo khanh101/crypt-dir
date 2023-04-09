@@ -80,14 +80,14 @@ def make_key_from_password(password: bytes) -> bytes:
 @dataclass
 class Certificate:
     salt: bytes
-    key_hash: bytes
+    key_sig: bytes
 
 
 def verify_certificate(cert: Certificate, password: bytes) -> bytes:
     password_with_salt = cert.salt + password
     key = make_key_from_password(password_with_salt)
     key_hash = sha1_hash(io.BytesIO(key))
-    assert key_hash == cert.key_hash, "password_does_not_match"
+    assert key_hash == cert.key_sig, "password_does_not_match"
     return key
 
 
@@ -96,4 +96,4 @@ def make_certificate(password: bytes) -> Certificate:
     password_with_salt = salt + password
     key = make_key_from_password(password_with_salt)
     key_hash = sha1_hash(io.BytesIO(key))
-    return Certificate(salt=salt, key_hash=key_hash)
+    return Certificate(salt=salt, key_sig=key_hash)
