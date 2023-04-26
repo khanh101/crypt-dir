@@ -116,7 +116,6 @@ def update_encrypted_dir(key: bytes, plain_dir: str, encrypted_dir: str, max_wor
             os.makedirs(os.path.dirname(encrypted_path))
         except FileExistsError:
             pass
-        print(f"encrypting: {encrypted_path}", file=sys.stderr)
         encrypted = codec.encrypt_file_if_needed(plain_path=plain_path, encrypted_path=encrypted_path)
         return encrypted, encrypted_path
 
@@ -154,7 +153,6 @@ def restore_encrypted_dir(key: bytes, encrypted_dir: str, restored_dir: str, max
             os.makedirs(os.path.dirname(decrypted_path))
         except FileExistsError:
             pass
-        print(f"decrypting ... {encrypted_path}", file=sys.stderr)
         codec.decrypt_file(encrypted_path=encrypted_path, decrypted_path=decrypted_path)
         return decrypted_path
 
