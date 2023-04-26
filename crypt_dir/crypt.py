@@ -59,7 +59,6 @@ def aes256_decrypt(
     remaining_size = file_size
     while remaining_size > 0:
         chunk = encrypted_read_io.read(CHUNK_SIZE)
-        assert len(chunk) == CHUNK_SIZE, "corrupted_file"
 
         b = aes.decrypt(chunk)
 

@@ -116,6 +116,7 @@ def update_encrypted_dir(key: bytes, plain_dir: str, encrypted_dir: str, max_wor
             os.makedirs(os.path.dirname(encrypted_path))
         except FileExistsError:
             pass
+        print(f"encrypting: {encrypted_path}", file=sys.stderr)
         encrypted = codec.encrypt_file_if_needed(plain_path=plain_path, encrypted_path=encrypted_path)
         return encrypted, encrypted_path
 
@@ -153,13 +154,13 @@ def restore_encrypted_dir(key: bytes, encrypted_dir: str, restored_dir: str, max
             os.makedirs(os.path.dirname(decrypted_path))
         except FileExistsError:
             pass
-        decrypted = codec.decrypt_file(encrypted_path=encrypted_path, decrypted_path=decrypted_path)
-        return decrypted, decrypted_path
+        print(f"decrypting ... {encrypted_path}", file=sys.stderr)
+        codec.decrypt_file(encrypted_path=encrypted_path, decrypted_path=decrypted_path)
+        return decrypted_path
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
         future_list = [executor.submit(decrypt_file, encrypted_path) for encrypted_path in
                        walk_file(encrypted_dir) if is_encrypted_file(encrypted_path)]
         for future in concurrent.futures.as_completed(future_list):
-            decrypted, path = future.result()
-            if decrypted:
-                print(f"decrypted: {path}", file=sys.stderr)
+            decrypted_path = future.result()
+            print(f"decrypted: {decrypted_path}", file=sys.stderr)

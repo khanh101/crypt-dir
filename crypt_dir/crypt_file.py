@@ -25,6 +25,7 @@ def read_header(read_io: BinaryIO) -> Header:
         b = read_io.read(n)
         assert len(b) == n, "corrupted_file"
         return b
+
     file_sig = read_exact(FILE_SIG_SIZE)
     key_sig = read_exact(KEY_SIG_SIZE)
     file_size = bytes_to_uint64(read_exact(UINT64_SIZE))
@@ -48,14 +49,15 @@ def aes256_encrypt_file_if_needed(
     file_sig = get_file_sig(plain_path)
     # check file updated
     if os.path.exists(encrypted_path):
-        try:
-            with open(encrypted_path, "rb") as f:
+        with open(encrypted_path, "rb") as f:
+            try:
                 header = read_header(f)
-            if key_sig == header.key_sig and file_sig == header.file_sig:
-                # only skip if both key_sig and file_sig are the same
-                return False
-        except AssertionError:
-            print(f"warning: corrupted encrypted file {encrypted_path}", file=sys.stderr)
+            except AssertionError:
+                print(f"warning: corrupted header encrypted file {encrypted_path}", file=sys.stderr)
+
+        if key_sig == header.key_sig and file_sig == header.file_sig:
+            # only skip if both key_sig and file_sig are the same
+            return False
 
     # encrypted file will be updated regardless its mtime is sooner or later
     # encrypt
