@@ -87,7 +87,7 @@ pip install --upgrade crypt-dir
 ## SPECIFICATION 1.*
 
 You don't need to know the specification. For some folks who want to know exactly what happened with their files, here
-is the specification for `key_file` and `.enc` files:
+is the specification for `key_file` and `.enc1` files:
 
 - if `key_file` does not exist, `crypt_dir` will create a random key of 32 bytes using `os.urandom` encoded into `hex`
 
