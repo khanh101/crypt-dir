@@ -69,8 +69,8 @@ def aes256_decrypt(
         decrypted_write_io.write(b)
 
 
-def make_key_from_password(password: bytes) -> bytes:
-    hash = sha1_hash(io.BytesIO(password))
+def make_key_from_passphrase(passphrase: bytes) -> bytes:
+    hash = sha1_hash(io.BytesIO(passphrase))
     hash += hash * (KEY_SIZE // HASH_SIZE)
     key = hash[:KEY_SIZE]
     return key
@@ -82,17 +82,17 @@ class Certificate:
     key_sig: bytes
 
 
-def verify_certificate(cert: Certificate, password: bytes) -> bytes:
-    password_with_salt = cert.salt + password
-    key = make_key_from_password(password_with_salt)
+def verify_certificate(cert: Certificate, passphrase: bytes) -> bytes:
+    passphrase_with_salt = cert.salt + passphrase
+    key = make_key_from_passphrase(passphrase_with_salt)
     key_hash = sha1_hash(io.BytesIO(key))
-    assert key_hash == cert.key_sig, "password_does_not_match"
+    assert key_hash == cert.key_sig, "passphrase_does_not_match"
     return key
 
 
-def make_certificate(password: bytes) -> Certificate:
+def make_certificate(passphrase: bytes) -> Certificate:
     salt = os.urandom(SALT_SIZE)
-    password_with_salt = salt + password
-    key = make_key_from_password(password_with_salt)
+    passphrase_with_salt = salt + passphrase
+    key = make_key_from_passphrase(passphrase_with_salt)
     key_hash = sha1_hash(io.BytesIO(key))
     return Certificate(salt=salt, key_sig=key_hash)

@@ -17,7 +17,7 @@ plain_dir = "plain"
 encrypted_dir = "encrypted"
 restored_dir = "restored"
 
-key = crypt_dir.make_key_from_password(b"password1234")
+key = crypt_dir.make_key_from_passphrase(b"passphrase1234")
 
 # Delete all files, directories in encrypted_dir that don't exist in the plain_dir
 crypt_dir.clean_encrypted_dir(
@@ -43,7 +43,7 @@ plain_dir = "plain"
 encrypted_dir = "encrypted"
 restored_dir = "restored"
 
-key = crypt_dir.make_key_from_password(b"password1234")
+key = crypt_dir.make_key_from_passphrase(b"passphrase1234")
 
 # restore all files in encrypted_dir using 12 workers
 crypt_dir.restore_encrypted_dir(
@@ -59,20 +59,20 @@ crypt_dir.restore_encrypted_dir(
 ```python
 import crypt_dir
 
-correct_password = b"password123"
+correct_passphrase = b"passphrase123"
 
-cert = crypt_dir.make_certificate(correct_password)
+cert = crypt_dir.make_certificate(correct_passphrase)
 print("cert", cert)
 
 try:
-    wrong_password = b"password456"
-    _ = crypt_dir.verify_certificate(cert, wrong_password)
+    wrong_passphrase = b"passphrase456"
+    _ = crypt_dir.verify_certificate(cert, wrong_passphrase)
 except AssertionError as e:
     print("expected assertion error: ", e)
 
-key = crypt_dir.verify_certificate(cert, correct_password)
+key = crypt_dir.verify_certificate(cert, correct_passphrase)
 
-print("generated key from correct password", key)
+print("generated key from correct passphrase", key)
 
 ```
 
