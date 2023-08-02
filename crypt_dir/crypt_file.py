@@ -53,7 +53,7 @@ def aes256_encrypt_file_if_needed(
             try:
                 header = read_header(f)
             except AssertionError:
-                print(f"warning: corrupted header encrypted file {encrypted_path}", file=sys.stderr)
+                print(f"warning: corrupted header encrypted file {encrypted_path}", file=sys.stderr, flush=True)
 
         if key_sig == header.key_sig and file_sig == header.file_sig:
             # only skip if both key_sig and file_sig are the same
