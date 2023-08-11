@@ -145,7 +145,7 @@ is the specification for `key_file` and `.enc` files:
 # UPLOAD
 
 ```shell
-rm -rf dist crypt_dir.egg-info
-python setup.py sdist
+rm -rf build dist crypt_dir.egg-info
+ python setup.py bdist_wheel --universal
 twine upload dist/*
 ```
