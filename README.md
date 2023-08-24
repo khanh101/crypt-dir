@@ -1,4 +1,7 @@
 # CRYPT_DIR
+**I am no longer maintain this project**
+
+**for a better version with compression using zlib, please find [https://github.com/khanh101/czlib](https://github.com/khanh101/czlib)**
 
 - Encrypt all your files and write into another directory if there is update
 - Clean the encrypted directory if files or directories have been deleted
